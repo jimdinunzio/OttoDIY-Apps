@@ -222,7 +222,9 @@ void Otto::walk(float steps, int T, int dir){
   //--      -90 : Walk forward
   //--       90 : Walk backward
   //-- Feet servos also have the same offset (for tiptoe a little bit)
-  int A[4]= {30, 30, 25, 20};
+
+  // for some reason my Otto cannot walk straight without some mods
+  int A[4]= {30, 30, 35, 20};
   int O[4] = {0, 0, 2, -6};
   double phase_diff[4] = {0, 0, DEG2RAD(dir * -90), DEG2RAD(dir * -90)};
 
@@ -248,18 +250,17 @@ void Otto::turn(float steps, int T, int dir){
   int A[4]= {30, 30, 20, 20};
   int O[4] = {0, 0, 4, -4};
   double phase_diff[4] = {0, 0, DEG2RAD(-90), DEG2RAD(-90)}; 
-    
+  
+  // for some reason my Otto cannot go left without some mods  
   if (dir == LEFT) {  
     A[0] = 35;
     A[1] = 10;
-    A[2] = 35;
+    A[2] = 40;
     O[3] = -6;
   }
   else {
     A[0] = 10;
-    A[1] = 35;
-    A[3] = 30;
-    O[3] = -4;
+    A[1] = 30;
   }
     
   //-- Let's oscillate the servos!

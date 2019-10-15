@@ -48,6 +48,10 @@
 #define UPPER_BOUND_CYCLES_BEFORE_TURN 41
 #define CYCLES_END_OF_RUN 78
 
+#define RIGHT_STEP_DEGREES 25
+#define LEFT_STEP_DEGREES 20
+#define PAUSE_FOR_DIR_MS 100
+
 // Pin definitions
 int intPin = 2;  // These can be changed, 2 and 3 are the Arduinos ext int pins
 int myLed  = 13;  // Set up pin 13 led for toggling
@@ -490,16 +494,27 @@ void loop()
 
   bool printLog = false;
   
-  if (millis() - lastPauseForDir < 500)
+  if (millis() - lastPauseForDir < PAUSE_FOR_DIR_MS)
     return;
 
-  if (cycleCount >= LOWER_BOUND_CYCLES_BEFORE_TURN && cycleCount <= UPPER_BOUND_CYCLES_BEFORE_TURN) {
+  bool countSteps = true;
+  // If at end of half lap,turn around and go opposite way
+  if (cycleCount >= LOWER_BOUND_CYCLES_BEFORE_TURN && cycleCount <= UPPER_BOUND_CYCLES_BEFORE_TURN) 
+  {
     cycleCount = UPPER_BOUND_CYCLES_BEFORE_TURN + 1;
     if (targetHeading < 0)
       targetHeading += 180;
     else 
       targetHeading -= 180;
-  } else if (cycleCount >= CYCLES_END_OF_RUN){
+    countSteps = false;
+    if (printLog) 
+    {
+      Serial.print("Turning around");
+    }
+    Otto.sing(S_happy);
+  } 
+  else if (abs(targetHeading - heading) < 10 && cycleCount >= CYCLES_END_OF_RUN)
+  {
     if (printLog)
       Serial.println("End of run");
     Otto.home();
@@ -525,30 +540,16 @@ void loop()
     lastPrintTime = millis();
   }
 
-  if (abs(result) > 100) // large turn, e.g. turning around
-  {
-    // always go right in turning around due to better right turn performance.
-    if (result > 0)
-      result = 360 - result;
-    // Turn around and go opposite way
-    int rightSteps = (abs(result) + 18) / 36;
-    if (printLog) {
-      Serial.print("Turning around, steps = ");
-      Serial.println(rightSteps);
-    }
-    Otto.sing(S_happy);
-    Otto.turn(rightSteps,1000,RIGHT);    
-    Otto.home();
-  } 
-  else if (abs(result) <= 10) // if only 10 degrees off of target heading, go straight.
+  if (abs(result) <= 10) // if only 10 degrees off of target heading, go straight.
   {
     if (printLog)
       Serial.println("Going Forward");
-    Otto.walk(5,1000,FORWARD);
+    Otto.walk(3,1000,FORWARD);
     if (direction != D_FWD)
       Otto._tone(note_G5,100,0);
     direction = D_FWD;
-    cycleCount += 5;
+    if (countSteps)
+      cycleCount += 3;
   }
   else if (result < -10) // if more than 10 degrees to left of heading, go right
   {
@@ -557,9 +558,10 @@ void loop()
     if (direction != D_RGT)
       Otto._tone(note_E6,100,0); //D6
     direction = D_RGT;
-    int rightSteps = (-result + 35) / 36;
+    int rightSteps = max(1, (-result + RIGHT_STEP_DEGREES / 2) / RIGHT_STEP_DEGREES);
     Otto.turn(rightSteps,1000,RIGHT);
-    cycleCount += rightSteps;
+    if (countSteps)
+      cycleCount += rightSteps;
   }
   else // result > 10 // if more than 10 degrees to right of heading, go left.
   {
@@ -568,9 +570,10 @@ void loop()
     if (direction != D_LFT)
       Otto._tone(note_D7,100,0);  //G6
     direction = D_LFT;
-    int leftSteps = 1 + (result + 25) / 26;    
+    int leftSteps = 1 + max(1, (result + LEFT_STEP_DEGREES / 2) / LEFT_STEP_DEGREES);    
     Otto.turn(leftSteps,1000,LEFT);
-    cycleCount += leftSteps;
+    if (countSteps)
+      cycleCount += leftSteps;
   }
 
   Otto.home();
